@@ -1,5 +1,7 @@
-import pygame
+import pygame # type: ignore
 import sys
+from queue import Queue, Empty
+import time
 
 # Constants
 BOARD_SIZE = 9
@@ -36,6 +38,7 @@ class QuoridorGame:
         self.selected_player = None
         self.selected_wall = None
         self.message = ""
+        self.frame_queue = Queue()
 
         # Pygame setup
         pygame.init()
@@ -161,27 +164,40 @@ class QuoridorGame:
         return None
 
     def handle_click(self, pos):
+        print(pos)
         x, y = pos
         board_x = (x - MARGIN) // (CELL_SIZE + GAP_SIZE)
         board_y = (y - MARGIN) // (CELL_SIZE + GAP_SIZE)
+        isMoved = False
+
+        print(board_x, board_y)
+        print(self.players[self.turn])
+        
 
         if 0 <= board_x < self.board_size and 0 <= board_y < self.board_size:
             if self.selected_wall:
+                print("c1")
                 new_wall_position = (board_y, board_x, 'H' if (y - MARGIN) % (CELL_SIZE + GAP_SIZE) > CELL_SIZE else 'V')
                 self.move_wall(new_wall_position)
                 self.selected_wall = None
+                isMoved = True
             elif self.players[self.turn] == (board_y, board_x):
+                print("c2")
                 self.selected_player = self.turn
             elif self.selected_player:
+                print("c3")
                 self.move_player(self.selected_player, (board_y, board_x))
                 self.selected_player = None
+                isMoved = True
             else:
+                print("c4")
                 # Select or place wall logic
                 if self.placed_walls[self.turn] < 6:
                     # Wall placement phase
                     if self.is_valid_wall((board_x, board_y, 'H')) and self.is_valid_wall((board_x, board_y, 'V')):
                         orientation = 'H' if (y - MARGIN) % (CELL_SIZE + GAP_SIZE) > CELL_SIZE else 'V'
                         self.place_wall(self.turn, (board_y, board_x, orientation))
+                        isMoved = True
                 else:
                     # Wall movement phase
                     for wall in self.walls:
@@ -200,6 +216,10 @@ class QuoridorGame:
                     if self.is_valid_wall((board_x, board_y, 'H')) and self.is_valid_wall((board_x, board_y, 'V')):
                         orientation = 'H' if (y - MARGIN) % (CELL_SIZE + GAP_SIZE) > CELL_SIZE else 'V'
                         self.place_wall(self.turn, (board_y, board_x, orientation))
+                        isMoved = True
+        
+        print("\n\n")
+        return isMoved
 
     def move_wall(self, new_position):
         if self.is_valid_wall(new_position):
@@ -212,14 +232,66 @@ class QuoridorGame:
             self.walls.add(self.selected_wall)
         self.selected_wall = None
 
+    def get_new_pos(self, poses):
+        # Map poses to player movements (This is just an example)
+        # Assuming poses is a list [thumb, index, middle, ring, pinky]
+        current_position = self.players[self.turn]
+        new_position = current_position
+
+        if poses == [1, 0, 0, 0, 0]:  # select player
+            return 1
+        if poses == [0, 1, 0, 0, 0]:  # Example pose for moving up
+            new_position = (current_position[0] - 1, current_position[1])
+        elif poses == [0, 1, 1, 0, 0]:  # Example pose for moving down
+            new_position = (current_position[0] + 1, current_position[1])
+        elif poses == [0, 1, 1, 1, 0]:  # Example pose for moving left
+            new_position = (current_position[0], current_position[1] - 1)
+        elif poses == [0, 1, 1, 1, 1]:  # Example pose for moving right
+            new_position = (current_position[0], current_position[1] + 1)
+        else:
+            return None
+        
+        return new_position
+
     def run(self):
         while True:
+            poses = [0, 0, 0, 0, 0]
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_click(pygame.mouse.get_pos())
+            
+            try:
+                if not self.frame_queue.empty():
+                    poses = self.frame_queue.get_nowait()  # Non-blocking get
+                    next_pos = self.get_new_pos(poses)
+                    isMoved = False
+
+                    if next_pos != None:
+                        # this section selects the player before moving
+                        if next_pos == 1:
+                            curr_pos = self.players[self.turn]
+                            curr_coord = ((curr_pos[1] * (CELL_SIZE + GAP_SIZE)) + MARGIN , (curr_pos[0] * (CELL_SIZE + GAP_SIZE)) + MARGIN)
+                            self.handle_click(curr_coord)
+                        # this section actually moves the player
+                        else:
+                            next_coord = ((next_pos[1] * (CELL_SIZE + GAP_SIZE)) + MARGIN , (next_pos[0] * (CELL_SIZE + GAP_SIZE)) + MARGIN)
+                            isMoved = self.handle_click(next_coord)
+                            
+                        # check if current player made his move, if true clear queue and wait
+                        if isMoved:
+                            self.selected_player = None
+                            time.sleep(2)
+                            with self.frame_queue.mutex:
+                                self.frame_queue.queue.clear()
+
+                                
+            except Empty:
+                pass  # If the queue is empty, just pass
+
 
             self.draw_board()
             self.draw_turn_indicator()

@@ -1,6 +1,5 @@
 import cv2
 import mediapipe as mp
-import numpy as np
 
 class HandPoseEstimator:
     def __init__(self):
