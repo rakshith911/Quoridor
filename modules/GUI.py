@@ -277,21 +277,22 @@ class QuoridorGame:
                             curr_coord = ((curr_pos[1] * (CELL_SIZE + GAP_SIZE)) + MARGIN , (curr_pos[0] * (CELL_SIZE + GAP_SIZE)) + MARGIN)
                             self.handle_click(curr_coord)
                         # this section actually moves the player
-                        else:
+                        elif self.selected_player != None:
                             next_coord = ((next_pos[1] * (CELL_SIZE + GAP_SIZE)) + MARGIN , (next_pos[0] * (CELL_SIZE + GAP_SIZE)) + MARGIN)
                             isMoved = self.handle_click(next_coord)
                             
-                        # check if current player made his move, if true clear queue and wait
+                        # check if current player made his move, if true clear queue and wait for opponent to send his moves
                         if isMoved:
                             self.selected_player = None
+                            pygame.display.flip()
                             time.sleep(2)
                             with self.frame_queue.mutex:
                                 self.frame_queue.queue.clear()
 
+                            print("Is queue emptied ?", self.frame_queue.empty())
                                 
             except Empty:
                 pass  # If the queue is empty, just pass
-
 
             self.draw_board()
             self.draw_turn_indicator()
