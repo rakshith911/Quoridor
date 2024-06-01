@@ -267,8 +267,11 @@ class QuoridorGame:
             
             try:
                 if not self.frame_queue.empty():
+                    
                     poses = self.frame_queue.get_nowait()  # Non-blocking get
+                    print(self.players[self.turn])
                     next_pos = self.get_new_pos(poses)
+                    print(next_pos)
                     isMoved = False
 
                     if next_pos != None:
@@ -286,12 +289,13 @@ class QuoridorGame:
                         if isMoved:
                             self.selected_player = None
                             pygame.display.flip()
-                            time.sleep(2)
+                            time.sleep(1)
                             
                             with self.frame_queue.mutex:
                                 self.frame_queue.queue.clear()
 
                             print("Is queue emptied ?", self.frame_queue.empty())
+                    print(self.players[self.turn])
                                 
             except Empty:
                 pass  # If the queue is empty, just pass

@@ -12,7 +12,7 @@ opponent_queue = Queue()
 
 # declare player
 PLAYER = "B"
-HOST = "localhost"
+HOST = "192.168.1.191"
 PORT = 8080
 
 def runPose(game : QuoridorGame):
@@ -80,11 +80,11 @@ def runSocket():
             data = s.recv(1024)
             
             if data:
+                data = data.decode(encoding="utf-8")
                 pos = list(map(int, data.split(" ")))
                 if len(pos) == 5:
                     frame_queue.put(pos)
-            
-            time.sleep(2)
+                time.sleep(1)
 
 def main():
     game = QuoridorGame(you = PLAYER)
