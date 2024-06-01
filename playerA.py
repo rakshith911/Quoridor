@@ -12,7 +12,7 @@ opponent_queue = Queue()
 
 # declare player
 PLAYER = "A"
-HOST = "localhost"
+HOST = ""
 PORT = 8080
 
 
@@ -44,11 +44,14 @@ def runPose(game : QuoridorGame):
                 # add data to queue
                 if game.turn == PLAYER:
                     curr_pos = game.players["A"]
+                    sp1 = game.selected_player
                     frame_queue.put(poses)
                     time.sleep(1)
-                    new_pos = game.players["A"]
                     
-                    if curr_pos != new_pos:
+                    new_pos = game.players["A"]
+                    sp2 = game.selected_player
+
+                    if curr_pos != new_pos or (sp1 != sp2 and sp2!=None):
                         opponent_queue.put(poses)
 
                 # Display moves based on detected poses
@@ -75,18 +78,39 @@ def runSocket(game : QuoridorGame):
         s.listen()
         print(".... Player A online ....")
 
-
-        # establish connection
-        conn, addr = s.accept()
-        with conn:
-            print(f".... Established Connection with player B ....")
+        def sender(conn : socket):
             while True:
                 if not opponent_queue.empty():
                     poses = opponent_queue.get()
                     data = " ".join(map(str, poses))
                     conn.sendall(bytes(data, encoding = "utf-8"))
-                    time.sleep(2)
+                    time.sleep(1)
+                    
+        def receiver(conn : socket):
+            while True:
+                data = conn.recv(1024)
+                if data:
+                    data = data.decode(encoding = "utf-8")
+                    pos = list(map(int, data.split(" ")))
+                    if len(pos) == 5:
+                        frame_queue.put(pos)
+                    time.sleep(1)
+        
+        
+        # establish connection
+        conn, addr = s.accept()
+        print(f".... Established Connection with player B ....")
+        
+        t1 = threading.Thread(target = sender, args=(conn,))
+        t2 = threading.Thread(target = receiver, args=(conn,))
 
+        t1.start()
+        t2.start()
+        
+        t1.join()
+        t2.join()
+            
+        conn.close()
                 
 
 def main():
@@ -95,15 +119,15 @@ def main():
 
     p1 = threading.Thread(target = runPose, args=(game, ))
     p2 = threading.Thread(target = runGUI, args=(game, ))
-    # p3 = threading.Thread(target = runSocket, args=(game, ))
+    p3 = threading.Thread(target = runSocket, args=(game, ))
     
     p1.start()
     p2.start()
-    # p3.start()
+    p3.start()
     
     p1.join()
     p2.join()
-    # p3.join()
+    p3.join()
 
 if __name__ == '__main__':
     main()
