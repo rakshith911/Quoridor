@@ -28,7 +28,7 @@ BLUE = (0, 0, 255)
 WHITE = (255,255,255)
 
 class QuoridorGame:
-    def __init__(self):
+    def __init__(self, you = ""):
         self.board_size = BOARD_SIZE
         self.players = {'A': (0, 4), 'B': (8, 4)}
         self.walls = set()
@@ -39,11 +39,12 @@ class QuoridorGame:
         self.selected_wall = None
         self.message = ""
         self.frame_queue = Queue()
+        self.you = you
 
         # Pygame setup
         pygame.init()
         self.screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE + 100))
-        pygame.display.set_caption("Quoridor Game")
+        pygame.display.set_caption(f"Quoridor Game (Player {self.you})")
         self.font = pygame.font.Font(None, 36)
         self.small_font = pygame.font.Font(None, 24)
         self.clock = pygame.time.Clock()
@@ -286,6 +287,7 @@ class QuoridorGame:
                             self.selected_player = None
                             pygame.display.flip()
                             time.sleep(2)
+                            
                             with self.frame_queue.mutex:
                                 self.frame_queue.queue.clear()
 
