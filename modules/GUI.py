@@ -286,7 +286,7 @@ class QuoridorGame:
                         if isMoved:
                             self.selected_player = None
                             pygame.display.flip()
-                            time.sleep(2)
+                            time.sleep(1)
                             
                             with self.frame_queue.mutex:
                                 self.frame_queue.queue.clear()
