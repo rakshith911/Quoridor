@@ -43,11 +43,14 @@ def runPose(game : QuoridorGame):
                 # add data to queue
                 if game.turn == PLAYER:
                     curr_pos = game.players["B"]
+                    sp1 = game.selected_player
                     frame_queue.put(poses)
                     time.sleep(1)
-                    new_pos = game.players["B"]
 
-                    if curr_pos != new_pos:
+                    new_pos = game.players["B"]
+                    sp2 = game.selected_player
+
+                    if curr_pos != new_pos or (sp1 != sp2 and sp2 != None):
                         opponent_queue.put(game.players["B"])
 
                 # Display moves based on detected poses
@@ -72,19 +75,47 @@ def runSocket():
     with socket.socket(socket.AF_INET , socket.SOCK_STREAM) as s:
         print(".... Player B online ....")
 
+        def sender():
+            while True:
+                if not opponent_queue.empty():
+                    poses = opponent_queue.get()
+                    data = " ".join(map(str, poses))
+                    print("\nDATA SENT\n", data)
+                    s.sendall(bytes(data, encoding = "utf-8"))
+                    time.sleep(1)
+                    
+        def receiver():
+            while True:
+                data = s.recv(1024)
+                if data:
+                    data = data.decode(encoding = "utf-8")
+                    pos = list(map(int, data.split(" ")))
+                    if len(pos) == 5:
+                        frame_queue.put(pos)
+                    time.sleep(1)
+
         # establish connection
         s.connect((HOST, PORT))
         print(f".... Established Connection with player A ....")
 
-        while True:
-            data = s.recv(1024)
+        t1 = threading.Thread(target = sender)
+        t2 = threading.Thread(target = receiver)
+
+        t1.start()
+        t2.start()
+        
+        t1.join()
+        t2.join()
             
-            if data:
-                data = data.decode(encoding="utf-8")
-                pos = list(map(int, data.split(" ")))
-                if len(pos) == 5:
-                    frame_queue.put(pos)
-                time.sleep(1)
+        # while True:
+        #     data = s.recv(1024)
+            
+        #     if data:
+        #         data = data.decode(encoding="utf-8")
+        #         pos = list(map(int, data.split(" ")))
+        #         if len(pos) == 5:
+        #             frame_queue.put(pos)
+        #         time.sleep(1)
 
 def main():
     game = QuoridorGame(you = PLAYER)
