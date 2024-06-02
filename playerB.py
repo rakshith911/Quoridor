@@ -51,7 +51,7 @@ def runPose(game : QuoridorGame):
                     sp2 = game.selected_player
 
                     if curr_pos != new_pos or (sp1 != sp2 and sp2 != None):
-                        opponent_queue.put(game.players["B"])
+                        opponent_queue.put(poses)
 
                 # Display moves based on detected poses
                 move = " ".join(map(str, poses))
